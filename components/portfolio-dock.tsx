@@ -38,27 +38,27 @@ const destinations: {
   network?: "github" | "linkedin"
   external?: boolean
 }[] = [
-  { id: "home", label: "Home", Icon: Home, href: "#home" },
-  { id: "work", label: "Work", Icon: Layers, href: "#work" },
-  { id: "about", label: "About", Icon: UserRound, href: "#about" },
-  { id: "experience", label: "Journey", Icon: Briefcase, href: "#experience" },
-  { id: "stack", label: "Stack", Icon: Code2, href: "#stack" },
-  { id: "contact", label: "Contact", Icon: Mail, href: "#contact" },
-  {
-    id: "github",
-    label: "GitHub",
-    href: "https://github.com/jadhavdineshdev",
-    network: "github",
-    external: true,
-  },
-  {
-    id: "linkedin",
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/dinesh-jadhav-8a4273309/",
-    network: "linkedin",
-    external: true,
-  },
-]
+    { id: "home", label: "Home", Icon: Home, href: "#home" },
+    { id: "work", label: "Work", Icon: Layers, href: "#work" },
+    { id: "about", label: "About", Icon: UserRound, href: "#about" },
+    { id: "experience", label: "Journey", Icon: Briefcase, href: "#experience" },
+    { id: "stack", label: "Stack", Icon: Code2, href: "#stack" },
+    { id: "contact", label: "Contact", Icon: Mail, href: "#contact" },
+    {
+      id: "github",
+      label: "GitHub",
+      href: "https://github.com/jadhavdineshdev",
+      network: "github",
+      external: true,
+    },
+    {
+      id: "linkedin",
+      label: "LinkedIn",
+      href: "https://www.linkedin.com/in/dinesh-jadhav-8a4273309/",
+      network: "linkedin",
+      external: true,
+    },
+  ]
 
 export function PortfolioDock() {
   const [activeSection, setActiveSection] = useState("home")
@@ -106,8 +106,6 @@ export function PortfolioDock() {
       volume: 0.85,
       cooldownMs: 180,
     })
-    let lastCueScrollY = window.scrollY
-    let lastScrollCue = 0
 
     const playControlCue = (target: EventTarget | null) => {
       if (!(target instanceof Element)) return
@@ -136,27 +134,11 @@ export function PortfolioDock() {
       playControlCue(event.target)
     }
 
-    const playScrollCue = () => {
-      const nextScrollY = window.scrollY
-      const distance = nextScrollY - lastCueScrollY
-      if (Math.abs(distance) < 100 || Date.now() - lastScrollCue < 360) return
-
-      lastCueScrollY = nextScrollY
-      lastScrollCue = Date.now()
-      void sounds.unlock().then(() => {
-        sounds.play(distance > 0 ? "forward" : "back", { cooldownMs: 360 })
-      }).catch((error: unknown) => {
-        console.error("Could not play the UISFX scroll sound.", error)
-      })
-    }
-
     document.addEventListener("pointerdown", playPointerCue, true)
     document.addEventListener("keydown", playKeyboardCue, true)
-    window.addEventListener("scroll", playScrollCue, { passive: true })
     return () => {
       document.removeEventListener("pointerdown", playPointerCue, true)
       document.removeEventListener("keydown", playKeyboardCue, true)
-      window.removeEventListener("scroll", playScrollCue)
       void sounds.destroy().catch((error: unknown) => {
         console.error("Could not close the UISFX player.", error)
       })
@@ -164,51 +146,51 @@ export function PortfolioDock() {
   }, [])
 
   return (
-      <Dock
-        aria-label="Portfolio navigation and social links"
-        className="portfolio-dock"
-        disableMagnification={Boolean(reduceMotion) || isMobile}
-        iconDistance={90}
-        iconMagnification={isMobile ? 32 : 38}
-        iconSize={isMobile ? 32 : 28}
-      >
-        {destinations.map(({ id, label, Icon, href, external, network }) => (
-          <DockIcon className="portfolio-dock-icon" key={id}>
-            <a
-              aria-current={!external && activeSection === id ? "location" : undefined}
-              aria-label={label}
-              className="portfolio-dock-link"
-              data-active={!external && activeSection === id}
-              data-label={label}
-              href={href}
-              onClick={external ? undefined : () => setActiveSection(id)}
-              rel={external ? "noopener noreferrer" : undefined}
-              target={external ? "_blank" : undefined}
-            >
-              {network ? (
-                <span className="portfolio-dock-brand-icon">
-                  <SocialIcon network={network} />
-                </span>
-              ) : Icon ? (
-                <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
-              ) : null}
-              {!external && activeSection === id && (
-                <motion.span
-                  className="portfolio-dock-indicator"
-                  layoutId="portfolio-dock-indicator"
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { type: "spring", stiffness: 440, damping: 32 }
-                  }
-                />
-              )}
-              <span aria-hidden="true" className="portfolio-dock-tooltip">
-                {label}
+    <Dock
+      aria-label="Portfolio navigation and social links"
+      className="portfolio-dock"
+      disableMagnification={Boolean(reduceMotion) || isMobile}
+      iconDistance={90}
+      iconMagnification={isMobile ? 32 : 38}
+      iconSize={isMobile ? 32 : 28}
+    >
+      {destinations.map(({ id, label, Icon, href, external, network }) => (
+        <DockIcon className="portfolio-dock-icon" key={id}>
+          <a
+            aria-current={!external && activeSection === id ? "location" : undefined}
+            aria-label={label}
+            className="portfolio-dock-link"
+            data-active={!external && activeSection === id}
+            data-label={label}
+            href={href}
+            onClick={external ? undefined : () => setActiveSection(id)}
+            rel={external ? "noopener noreferrer" : undefined}
+            target={external ? "_blank" : undefined}
+          >
+            {network ? (
+              <span className="portfolio-dock-brand-icon">
+                <SocialIcon network={network} />
               </span>
-            </a>
-          </DockIcon>
-        ))}
-      </Dock>
+            ) : Icon ? (
+              <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
+            ) : null}
+            {!external && activeSection === id && (
+              <motion.span
+                className="portfolio-dock-indicator"
+                layoutId="portfolio-dock-indicator"
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 440, damping: 32 }
+                }
+              />
+            )}
+            <span aria-hidden="true" className="portfolio-dock-tooltip">
+              {label}
+            </span>
+          </a>
+        </DockIcon>
+      ))}
+    </Dock>
   )
 }

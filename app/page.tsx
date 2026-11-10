@@ -4,20 +4,16 @@ import Image from "next/image"
 import { useState } from "react"
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUpRight,
-  Check,
-  Code2,
-  ChevronDown,
-  FileText,
   Mail,
   Phone,
-  ShieldCheck,
 } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 
 import { PortfolioDock } from "@/components/portfolio-dock"
 import { PortraitInteraction } from "@/components/portrait-interaction"
+import { ZacharyWorkSection } from "@/components/zachary-work-section"
+import { InteractiveFooter } from "@/components/interactive-footer"
 import MagneticButton from "@/components/smoothui/magnetic-button"
 import FolderReveal, {
   type FolderRevealItem,
@@ -74,69 +70,6 @@ const toolkitItems: FolderRevealItem[] = [
   },
 ]
 
-type PortfolioProjectDetails = {
-  id: string
-  number: string
-  title: string
-  repository: string
-  category: string
-  period: string
-  intro: string
-  details: string[]
-  stack: string[]
-}
-
-type PortfolioProject = PortfolioProjectDetails &
-  (
-    | { status: "In progress"; liveUrl?: never }
-    | { status: "Live"; liveUrl: string }
-  )
-
-const projects: PortfolioProject[] = [
-  {
-    id: "healthchain",
-    number: "01",
-    title: "HealthChain",
-    repository: "https://github.com/jadhavdineshdev/Cura-Chain",
-    status: "In progress",
-    category: "FULL-STACK · HEALTH TECH",
-    period: "FEB 2026 — PRESENT",
-    intro:
-      "A healthcare records platform where patients stay in control of who sees their information.",
-    details: [
-      "Built dedicated experiences for patients, doctors, and administrators, with role-based access and doctor license verification.",
-      "Added patient-controlled record permissions and Google authentication.",
-      "Kept sensitive medical data off-chain while anchoring SHA-256 integrity proofs to Hyperledger Fabric.",
-    ],
-    stack: [
-      "React",
-      "Node.js",
-      "Express",
-      "Hyperledger Fabric",
-      "Docker",
-      "Tailwind CSS",
-    ],
-  },
-  {
-    id: "docsboard",
-    number: "02",
-    title: "DocsBoard",
-    repository: "https://github.com/jadhavdineshdev/DocsBoard",
-    liveUrl: "https://docs-board.vercel.app/",
-    status: "Live",
-    category: "FRONTEND · DOCUMENT WORKSPACE",
-    period: "JUN 2026 — AUG 2026",
-    intro:
-      "An interactive board for collecting documents, moving them around, and picking up where you left off.",
-    details: [
-      "Added document creation, upload, download, and deletion, with support for four formats up to 2 MB.",
-      "Used localStorage to keep board data in the browser.",
-      "Designed responsive layouts and dark mode, with Motion and GSAP interactions across mobile and desktop.",
-    ],
-    stack: ["React", "Vite", "JavaScript", "Tailwind CSS", "Motion", "GSAP"],
-  },
-]
-
 const skillGroupNames = ["UI", "Server & data", "Build & design"] as const
 
 const skillGroups = {
@@ -155,74 +88,9 @@ const skillGroups = {
   ],
 } satisfies Record<(typeof skillGroupNames)[number], string[]>
 
-function HealthChainPreview() {
-  return (
-    <div
-      aria-label="HealthChain preview: patient-controlled record access and verified integrity proofs"
-      className="healthchain-preview"
-      role="img"
-    >
-      <div className="preview-toolbar">
-        <div className="preview-brand">
-          <span className="healthchain-mark">+</span>
-          HEALTHCHAIN
-        </div>
-        <span className="preview-protected"><ShieldCheck size={12} /> PRIVATE BY DESIGN</span>
-      </div>
-      <div className="healthchain-body">
-        <span className="preview-overline">PATIENT PORTAL / RECORD SHARING</span>
-        <h3>Your records.<br />Your call.</h3>
-        <p>Access is clear, and sharing starts with consent.</p>
-        <div className="record-permission">
-          <span className="permission-icon"><FileText size={15} /></span>
-          <span className="permission-copy">
-            <strong>Shared with your care team</strong>
-            <small>Permission can be changed by you</small>
-          </span>
-          <span className="permission-state"><Check size={12} /></span>
-        </div>
-        <div className="integrity-proof">
-          <span className="proof-dot" />
-          <span>SHA-256 INTEGRITY PROOF</span>
-          <span className="proof-ledger">HYPERLEDGER FABRIC</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DocsBoardLivePreview() {
-  return (
-    <div className="docsboard-live-preview">
-      <div aria-hidden="true" className="live-preview-glow" />
-      <div className="live-preview-window">
-        <div className="live-preview-toolbar">
-          <span className="window-lights"><i /><i /><i /></span>
-          <span className="live-preview-address">
-            <span className="live-preview-lock">↗</span>
-            docs-board.vercel.app
-          </span>
-          <span className="live-preview-live">LIVE</span>
-        </div>
-        <div className="live-preview-viewport">
-          <Image
-            alt="DocsBoard workspace with saved documents and download cards"
-            className="live-preview-image"
-            fill
-            sizes="(max-width: 700px) 90vw, (max-width: 1100px) 45vw, 40vw"
-            src="/docsboard-preview.png"
-          />
-        </div>
-      </div>
-      <span className="live-preview-caption">A little less lost, one document at a time.</span>
-    </div>
-  )
-}
-
 export default function Page() {
   const reduceMotion = useReducedMotion()
   const [folderOpen, setFolderOpen] = useState(false)
-  const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [activeSkillGroup, setActiveSkillGroup] =
     useState<(typeof skillGroupNames)[number]>("UI")
 
@@ -315,127 +183,7 @@ export default function Page() {
         </InfiniteSlider>
       </div>
 
-      <section className="work-section page-width" id="work">
-        <motion.div
-          className="section-heading"
-          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.3 }}
-          transition={{ duration: reduceMotion ? 0 : 0.5 }}
-        >
-          <div>
-            <h2>Each build left<br />a <span>mark.</span></h2>
-          </div>
-          <p>
-            Some lessons came from a real problem.<br />
-            Others came from making something just to learn.
-          </p>
-        </motion.div>
-
-        <div className="project-list">
-          {projects.map((project, index) => {
-            const isExpanded = expandedProject === project.id
-            const isLive = project.status === "Live"
-            const projectDestination = isLive ? project.liveUrl : project.repository
-
-            return (
-              <motion.article
-                className={`project-card project-${project.id}`}
-                id={project.id}
-                key={project.id}
-                initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, amount: 0.16, margin: "-8% 0px -8% 0px" }}
-                transition={{ duration: reduceMotion ? 0 : 0.55, delay: reduceMotion ? 0 : index * 0.06 }}
-              >
-                <a
-                  aria-label={`Open ${project.title} ${isLive ? "live website" : "source repository"}`}
-                  className="project-destination"
-                  href={projectDestination}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <div className="project-visual">
-                    {isLive ? (
-                      <DocsBoardLivePreview />
-                    ) : (
-                      <HealthChainPreview />
-                    )}
-                  </div>
-                  <div className="project-meta">
-                    <span className="project-number">{project.number}</span>
-                    <div className="project-info">
-                      <div className="project-overline">
-                        <span className="project-type">{project.category}</span>
-                        <span className="project-period">{project.period}</span>
-                      </div>
-                      <span className={`project-status ${isLive ? "is-live" : "is-progress"}`}>
-                        <i aria-hidden="true" />
-                        {project.status}
-                      </span>
-                      <h3>{project.title}</h3>
-                      <p>{project.intro}</p>
-                      <div aria-label={`${project.title} technologies`} className="project-stack">
-                        {project.stack.map((technology) => (
-                          <span key={technology}>{technology}</span>
-                        ))}
-                      </div>
-                      <div className="project-destination-label">
-                        <span>{isLive ? "Open the live project" : "Explore the source repository"}</span>
-                        <ArrowUpRight aria-hidden="true" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                </a>
-                <div className="project-actions">
-                  <a
-                    aria-label={`View ${project.title} source on GitHub`}
-                    href={project.repository}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <Code2 aria-hidden="true" size={15} />
-                    View source code
-                    <ArrowUpRight aria-hidden="true" size={13} />
-                  </a>
-                </div>
-                <button
-                  aria-controls={`${project.id}-notes`}
-                  aria-expanded={isExpanded}
-                  className="project-toggle"
-                  onClick={() => setExpandedProject(isExpanded ? null : project.id)}
-                  type="button"
-                >
-                  {isExpanded ? "Close build notes" : "A few build notes"}
-                  <ChevronDown aria-hidden="true" className={isExpanded ? "is-open" : ""} size={15} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {isExpanded && (
-                    <motion.div
-                      animate={{ height: "auto", opacity: 1 }}
-                      className="project-details"
-                      exit={{ height: 0, opacity: 0 }}
-                      id={`${project.id}-notes`}
-                      initial={{ height: 0, opacity: 0 }}
-                      transition={
-                        reduceMotion
-                          ? { duration: 0 }
-                          : { height: { type: "spring", stiffness: 190, damping: 24 }, opacity: { duration: 0.18 } }
-                      }
-                    >
-                      <ul>
-                        {project.details.map((detail) => (
-                          <li key={detail}>{detail}</li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.article>
-            )
-          })}
-        </div>
-      </section>
+      <ZacharyWorkSection />
 
       <section className="about-section" id="about">
         <div className="about-inner page-width">
@@ -677,16 +425,7 @@ export default function Page() {
         </div>
       </section>
 
-      <footer className="site-footer page-width">
-        <a aria-label="Dinesh Jadhav, back to top" className="wordmark footer-wordmark" href="#home">
-          <span aria-hidden="true" className="wordmark-mark">
-            <Image alt="" fill sizes="32px" src="/dinesh-portrait.jpeg" />
-          </span>
-          <span className="wordmark-name">Dinesh Jadhav</span>
-        </a>
-        <span className="footer-made">Built in Mumbai <span>·</span> © 2026</span>
-        <a className="footer-top" href="#home">Back to the top <ArrowRight size={13} /></a>
-      </footer>
+      <InteractiveFooter />
       <PortfolioDock />
     </main>
   )

@@ -46,7 +46,7 @@ export default function RootLayout({
         <ThemeProvider>
           <SmoothScroll />
           <PagePreloader
-            background="bg-[#f2eade]"
+            background="bg-[#f7f6f2]"
             duration={4200}
             variant="words"
             words={[
