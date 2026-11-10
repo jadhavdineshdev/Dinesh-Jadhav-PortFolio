@@ -187,7 +187,7 @@ export default function RootLayout({
           <SmoothScroll />
           <PagePreloader
             background="bg-[#f7f6f2]"
-            duration={4200}
+            duration={1600}
             variant="words"
             words={[
               "Curiosity, kept alive",

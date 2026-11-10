@@ -69,6 +69,7 @@ export function PortraitInteraction({
     )
   }
 
+  // Floating sticky note animation
   useEffect(() => {
     const note = stickyNoteRef.current
     if (!note) return
@@ -124,49 +125,71 @@ export function PortraitInteraction({
     }
   }, [portalRoot, reduceMotion, voicePlaying])
 
+  // Instant mobile & desktop voice note trigger
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !voiceSrc) return
 
-    const handlePreloaderComplete = () => {
-      voicePlaybackArmed.current = true
-      resumeVoice()
-    }
+    // Immediately load audio into browser RAM
+    audio.load()
 
-    const removeUnlockListeners = () => {
-      window.removeEventListener("pointerdown", resumeVoice)
-      window.removeEventListener("keydown", resumeVoice)
-    }
+    let userInteracted = false
 
-    const resumeVoice = () => {
-      if (!voicePlaybackArmed.current) return
-      if (!audio.paused) {
-        removeUnlockListeners()
-        return
-      }
-
-      void audio.play().catch((error: unknown) => {
-        console.info("Voice autoplay is waiting for browser permission.", error)
+    const playVoice = () => {
+      if (!audio.paused) return
+      void audio.play().catch(() => {
+        // Autoplay policy waiting for next gesture
       })
     }
 
-    audio.addEventListener("playing", removeUnlockListeners)
+    const handlePreloaderComplete = () => {
+      voicePlaybackArmed.current = true
+      // Preloader finished: play immediately
+      playVoice()
+    }
+
+    const handleUserGesture = () => {
+      userInteracted = true
+      // On user interaction (touch/click/keydown), start playback promptly
+      voicePlaybackArmed.current = true
+      playVoice()
+    }
+
+    const removeUnlockListeners = () => {
+      window.removeEventListener("pointerdown", handleUserGesture)
+      window.removeEventListener("touchstart", handleUserGesture)
+      window.removeEventListener("touchend", handleUserGesture)
+      window.removeEventListener("click", handleUserGesture)
+      window.removeEventListener("keydown", handleUserGesture)
+    }
+
+    const onPlaying = () => {
+      setVoicePlaying(true)
+      removeUnlockListeners()
+    }
+
+    audio.addEventListener("playing", onPlaying)
     window.addEventListener("portfolio:preloader-complete", handlePreloaderComplete)
-    window.addEventListener("pointerdown", resumeVoice, { passive: true })
-    window.addEventListener("keydown", resumeVoice)
+    window.addEventListener("pointerdown", handleUserGesture, { passive: true })
+    window.addEventListener("touchstart", handleUserGesture, { passive: true })
+    window.addEventListener("touchend", handleUserGesture, { passive: true })
+    window.addEventListener("click", handleUserGesture, { passive: true })
+    window.addEventListener("keydown", handleUserGesture)
+
+    // Check if preloader already finished
     if (document.documentElement.dataset.preloaderComplete === "true") {
       handlePreloaderComplete()
     }
 
     return () => {
-      audio.removeEventListener("playing", removeUnlockListeners)
+      audio.removeEventListener("playing", onPlaying)
       window.removeEventListener(
         "portfolio:preloader-complete",
         handlePreloaderComplete
       )
       removeUnlockListeners()
     }
-  }, [portalRoot, voiceSrc])
+  }, [voiceSrc])
 
   useEffect(() => {
     if (reduceMotion) return
@@ -217,17 +240,22 @@ export function PortraitInteraction({
     }
   }, [reduceMotion, x, y])
 
+  // Explicit user tap on portrait: ALWAYS plays immediately on mobile & desktop
   function openPortrait() {
     if (dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal()
       closeRef.current?.focus()
     }
 
-    if (voicePlaybackArmed.current && voiceSrc && audioRef.current) {
-      if (!audioRef.current.paused) return
-      void audioRef.current.play().catch((error: unknown) => {
-        console.error("Could not play the supplied voice recording.", error)
-      })
+    const audio = audioRef.current
+    if (audio && voiceSrc) {
+      voicePlaybackArmed.current = true
+      if (audio.paused || audio.ended) {
+        audio.currentTime = 0
+        void audio.play().catch((error: unknown) => {
+          console.warn("Could not play voice recording:", error)
+        })
+      }
     }
   }
 
@@ -239,6 +267,26 @@ export function PortraitInteraction({
 
   return (
     <>
+      {/* Root audio element: always loaded in DOM for instantaneous playback on mobile */}
+      {voiceSrc && (
+        <audio
+          ref={audioRef}
+          aria-label="Dinesh's voice note"
+          className="portrait-audio sr-only"
+          onEnded={() => setVoicePlaying(false)}
+          onPause={() => setVoicePlaying(false)}
+          onPlaying={(event) => {
+            setVoicePlaying(true)
+            updateTranscriptProgress(event.currentTarget)
+          }}
+          onTimeUpdate={(event) =>
+            updateTranscriptProgress(event.currentTarget)
+          }
+          preload="auto"
+          src={voiceSrc}
+        />
+      )}
+
       <span className="portrait-magnetic-area">
         <motion.span
           animate={reduceMotion ? undefined : { y: [0, -6, 0], rotate: [0, 1.5, 0] }}
@@ -248,7 +296,7 @@ export function PortraitInteraction({
           <motion.button
             ref={triggerRef}
             aria-haspopup="dialog"
-            aria-label="View Dinesh's portrait"
+            aria-label="View Dinesh's portrait and listen to voice note"
             className="portrait-button"
             onClick={openPortrait}
             style={{ x, y }}
@@ -361,24 +409,21 @@ export function PortraitInteraction({
                     : "A voice note will live here when I record one."}
                 </p>
                 {voiceSrc && (
-                  <audio
-                    ref={audioRef}
-                    aria-label="Dinesh's voice note"
-                    className="portrait-audio"
-                    onEnded={() => setVoicePlaying(false)}
-                    onPause={() => setVoicePlaying(false)}
-                    onPlaying={(event) => {
-                      setVoicePlaying(true)
-                      updateTranscriptProgress(event.currentTarget)
+                  <button
+                    className="portrait-audio-toggle"
+                    onClick={() => {
+                      const audio = audioRef.current
+                      if (!audio) return
+                      if (audio.paused) {
+                        void audio.play()
+                      } else {
+                        audio.pause()
+                      }
                     }}
-                    onTimeUpdate={(event) =>
-                      updateTranscriptProgress(event.currentTarget)
-                    }
-                    preload="auto"
-                    src={voiceSrc}
+                    type="button"
                   >
-                    Your browser does not support audio playback.
-                  </audio>
+                    {voicePlaying ? "❚❚ Pause Voice Note" : "▶ Play Voice Note"}
+                  </button>
                 )}
               </div>
             </dialog>
