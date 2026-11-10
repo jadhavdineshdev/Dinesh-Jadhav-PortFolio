@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useReducedMotion, motion } from "motion/react"
 
+
 import { Dock, DockIcon } from "@/components/ui/dock"
 
 function SocialIcon({ network }: { network: "github" | "linkedin" }) {
