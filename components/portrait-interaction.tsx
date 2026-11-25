@@ -73,15 +73,16 @@ export function PortraitInteraction({
   useEffect(() => {
     const note = stickyNoteRef.current
     if (!note) return
+    const isPhone = window.matchMedia("(max-width: 680px)").matches
 
     if (!voicePlaying) {
       gsap.to(note, {
         autoAlpha: 0,
-        x: 70,
-        y: 28,
-        rotation: 6,
-        scale: 0.94,
-        duration: reduceMotion ? 0 : 0.38,
+        x: isPhone ? 0 : 70,
+        y: 20,
+        rotation: isPhone ? 0 : 4,
+        scale: 0.96,
+        duration: reduceMotion ? 0 : 0.3,
         ease: "power2.in",
         overwrite: true,
         onComplete: () => {
@@ -95,29 +96,36 @@ export function PortraitInteraction({
 
     const entrance = gsap.fromTo(
       note,
-      { autoAlpha: 0, x: 70, y: 28, rotation: 6, scale: 0.94 },
+      {
+        autoAlpha: 0,
+        x: isPhone ? 0 : 70,
+        y: 20,
+        rotation: isPhone ? 0 : 4,
+        scale: 0.96,
+      },
       {
         autoAlpha: 1,
         x: 0,
         y: 0,
-        rotation: -2,
+        rotation: isPhone ? 0 : -1.5,
         scale: 1,
-        duration: reduceMotion ? 0 : 0.72,
-        ease: "back.out(1.45)",
+        duration: reduceMotion ? 0 : 0.55,
+        ease: "power3.out",
         overwrite: true,
       }
     )
-    const float = reduceMotion
-      ? undefined
-      : gsap.to(note, {
-          y: "+=5",
-          rotation: -0.5,
-          duration: 2.4,
-          delay: 0.72,
-          ease: "sine.inOut",
-          repeat: -1,
-          yoyo: true,
-        })
+    const float =
+      reduceMotion || isPhone
+        ? undefined
+        : gsap.to(note, {
+            y: "+=4",
+            rotation: -0.5,
+            duration: 2.4,
+            delay: 0.6,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true,
+          })
 
     return () => {
       entrance.kill()
@@ -333,13 +341,23 @@ export function PortraitInteraction({
               <span aria-hidden="true" className="voice-sticky-tape" />
               <header className="voice-sticky-header">
                 <span>VOICE NOTE / 01</span>
-                <span aria-hidden="true" className="voice-sticky-wave">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </span>
+                <div className="voice-sticky-controls">
+                  <span aria-hidden="true" className="voice-sticky-wave">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <button
+                    aria-label="Stop voice note"
+                    className="voice-sticky-dismiss"
+                    onClick={() => audioRef.current?.pause()}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
               </header>
               <h2>A little hello</h2>
               <div className="voice-transcript">

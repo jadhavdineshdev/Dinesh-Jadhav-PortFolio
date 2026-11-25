@@ -51,9 +51,9 @@ export function InteractiveFooter() {
           cellSize={8}
           className="footer-flow-canvas"
           colors={[
-            "rgba(18, 19, 18, 0.06)", // Dim ambient field dots
-            "rgba(18, 19, 18, 0.28)", // Swirling flow vectors
-            "rgba(18, 19, 18, 0.92)", // Solid rasterized "DINESH" dots
+            "rgba(142, 202, 230, 0.42)", // #8ecae6 — Ambient sky-blue field dots
+            "rgba(33, 158, 188, 0.85)", // #219ebc — Swirling cerulean flow vectors
+            "#023047", // #023047 — Deep Prussian Blue rasterized "DINESH" dots
           ]}
           gap={3}
           pointerRadius={150}

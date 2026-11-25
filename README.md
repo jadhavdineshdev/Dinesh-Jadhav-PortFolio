@@ -13,6 +13,13 @@
 
 ---
 
+### Featured Work
+
+- **[CuraChain](https://github.com/jadhavdineshdev/CuraChain)** — Dual-layer hospital records system with Hyperledger Fabric, FastAPI, PostgreSQL, and patient-governed consent ([Live](https://cura-chain.vercel.app/)).
+- **[DocsBoard](https://github.com/jadhavdineshdev/DocsBoard)** — Local-first spatial workspace for multi-format document ingestion ([Live](https://docs-board.vercel.app/)).
+
+---
+
 ### Highlights
 
 - **Editorial Case Studies**: Deep architectural retrospectives with interactive live models.

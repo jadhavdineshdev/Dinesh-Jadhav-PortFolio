@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Personal portfolio of Dinesh Jadhav, Builder & Note-Taker. Frontend & Full-Stack Developer based in Mumbai.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fbfbf8",
-    theme_color: "#181919",
+    background_color: "#ea2a1e",
+    theme_color: "#151111",
     icons: [
       {
         src: "/icon.png",

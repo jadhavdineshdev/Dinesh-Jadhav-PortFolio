@@ -85,12 +85,12 @@ interface FolderSkin {
  */
 const FOLDER_SKINS: Record<FolderRevealColor, FolderSkin> = {
   blue: {
-    back: "oklch(0.56 0.13 250)",
-    backDeep: "oklch(0.49 0.14 250)",
-    edge: "oklch(0.84 0.07 252)",
-    flap: "oklch(0.64 0.14 251)",
-    flapDeep: "oklch(0.57 0.15 251)",
-    label: "oklch(0.98 0.01 250)",
+    back: "#219ebc",
+    backDeep: "#023047",
+    edge: "#8ecae6",
+    flap: "#3ab0cc",
+    flapDeep: "#219ebc",
+    label: "#ffffff",
   },
   brand: {
     back: "oklch(0.63 0.17 352)",

@@ -1,17 +1,34 @@
 import type { Metadata, Viewport } from "next"
-import { Montserrat, Poppins } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import "lenis/dist/lenis.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SmoothScroll } from "@/components/smooth-scroll"
-import PagePreloader from "@/components/smoothui/components/smoothui/page-preloader"
+import { CustomCursor } from "@/components/custom-cursor"
+import { NikaPreloader } from "@/components/nika-preloader"
 import { cn } from "@/lib/utils"
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dineshjadhav.dev"
+const getSiteUrl = () => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.startsWith("http")
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : `https://${process.env.NEXT_PUBLIC_SITE_URL}`
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return "https://dineshjadhav.dev"
+}
+
+const siteUrl = getSiteUrl()
+const portraitUrl = `${siteUrl}/dinesh-portrait.jpeg`
 
 export const viewport: Viewport = {
-  themeColor: "#181919",
+  themeColor: "#ea2a1e",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -20,11 +37,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Dinesh Jadhav — Builder & Note-Taker | Frontend & Full-Stack Developer",
+    default: "Dinesh Jadhav — Frontend & Full-Stack Developer | Portfolio",
     template: "%s | Dinesh Jadhav",
   },
   description:
-    "Personal portfolio and engineering case studies of Dinesh Jadhav: learning, architectural projects, and lessons from building thoughtful web interfaces in Mumbai, India.",
+    "Hi, I'm Dinesh Jadhav — a Frontend & Full-Stack Developer and B.Tech AI & Data Science student from Mumbai, India. Building CuraChain, DocsBoard, and thoughtful interactive web products.",
   applicationName: "Dinesh Jadhav Portfolio",
   authors: [{ name: "Dinesh Jadhav", url: "https://github.com/jadhavdineshdev" }],
   generator: "Next.js",
@@ -36,10 +53,11 @@ export const metadata: Metadata = {
     "React Developer",
     "Next.js Developer",
     "TypeScript",
+    "FastAPI",
     "Tailwind CSS",
     "GSAP",
     "Hyperledger Fabric",
-    "HealthChain",
+    "CuraChain",
     "DocsBoard",
     "Mumbai Developer",
     "Software Engineer India",
@@ -58,25 +76,32 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "Dinesh Jadhav Portfolio",
-    title: "Dinesh Jadhav — Builder & Note-Taker | Frontend & Full-Stack Developer",
+    siteName: "Dinesh Jadhav — Portfolio",
+    title: "Dinesh Jadhav — Frontend & Full-Stack Developer",
     description:
-      "Personal portfolio of Dinesh Jadhav. Exploring decentralized architectures, local-first UX, and modern web interfaces from Mumbai, India.",
+      "Hi, I'm Dinesh Jadhav from Mumbai, India — B.Tech AI & Data Science student and Full-Stack Developer crafting CuraChain (Hyperledger Fabric EHR), DocsBoard, and interactive web experiences.",
     images: [
       {
-        url: "/dinesh-portrait.jpeg",
+        url: portraitUrl,
+        secureUrl: portraitUrl,
         width: 800,
         height: 800,
-        alt: "Dinesh Jadhav — Builder & Note-Taker",
+        type: "image/jpeg",
+        alt: "Dinesh Jadhav — Frontend & Full-Stack Developer from Mumbai, India",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dinesh Jadhav — Builder & Note-Taker",
+    title: "Dinesh Jadhav — Frontend & Full-Stack Developer",
     description:
-      "Frontend & Full-Stack Developer based in Mumbai. Building HealthChain, DocsBoard, and interactive web experiences.",
-    images: ["/dinesh-portrait.jpeg"],
+      "B.Tech AI & Data Science student and Full-Stack Developer from Mumbai, India. Building CuraChain, DocsBoard, and tactile web interfaces.",
+    images: [
+      {
+        url: portraitUrl,
+        alt: "Dinesh Jadhav — Frontend & Full-Stack Developer",
+      },
+    ],
     creator: "@dineshjadhav",
   },
   robots: {
@@ -99,16 +124,16 @@ export const metadata: Metadata = {
   },
 }
 
-const poppins = Poppins({
+const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 })
 
-const montserrat = Montserrat({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-mono",
+  weight: ["400", "500", "600", "700"],
 })
 
 const jsonLd = {
@@ -171,8 +196,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "antialiased",
-        montserrat.variable,
-        poppins.variable,
+        geistSans.variable,
+        geistMono.variable,
         "font-sans"
       )}
     >
@@ -185,16 +210,8 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <SmoothScroll />
-          <PagePreloader
-            background="bg-[#f7f6f2]"
-            duration={1600}
-            variant="words"
-            words={[
-              "Curiosity, kept alive",
-              "Ideas, built by hand",
-              "The story keeps unfolding",
-            ]}
-          />
+          <CustomCursor />
+          <NikaPreloader duration={1400} />
           {children}
         </ThemeProvider>
       </body>
