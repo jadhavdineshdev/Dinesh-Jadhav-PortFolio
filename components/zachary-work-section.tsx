@@ -193,6 +193,7 @@ export function ZacharyWorkSection() {
     if (prefersReduced) return
 
     gsap.registerPlugin(ScrollTrigger)
+    const isDesktop = window.matchMedia("(min-width: 769px)").matches
 
     const ctx = gsap.context(() => {
       if (viewMode === "canvas") {
@@ -216,22 +217,26 @@ export function ZacharyWorkSection() {
             }
           )
 
-          const media = tile.querySelector(".nk-parallax-media")
+          const media = tile.querySelector<HTMLElement>(".nk-parallax-media")
           if (media) {
-            gsap.fromTo(
-              media,
-              { yPercent: -5 },
-              {
-                yPercent: 5,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: tile,
-                  start: "top bottom",
-                  end: "bottom top",
-                  scrub: 0.8,
-                },
-              }
-            )
+            if (isDesktop) {
+              gsap.fromTo(
+                media,
+                { yPercent: -4 },
+                {
+                  yPercent: 4,
+                  ease: "none",
+                  scrollTrigger: {
+                    trigger: tile,
+                    start: "top bottom",
+                    end: "bottom top",
+                    scrub: 0.8,
+                  },
+                }
+              )
+            } else {
+              gsap.set(media, { clearProps: "transform" })
+            }
           }
         })
       } else {
@@ -263,6 +268,7 @@ export function ZacharyWorkSection() {
   const openCaseStudy = (projectId: string) => {
     setActiveId(projectId)
     window.history.replaceState(null, "", `#${projectId}`)
+    window.dispatchEvent(new Event("portfolio:section-sync"))
     setViewMode("case-study")
     window.scrollTo({
       top: (sectionRef.current?.offsetTop || 0) - 70,
@@ -272,6 +278,7 @@ export function ZacharyWorkSection() {
 
   const closeCaseStudy = () => {
     window.history.replaceState(null, "", "#work")
+    window.dispatchEvent(new Event("portfolio:section-sync"))
     setViewMode("canvas")
     window.scrollTo({
       top: (sectionRef.current?.offsetTop || 0) - 70,
@@ -283,6 +290,7 @@ export function ZacharyWorkSection() {
     if (newId === activeId) return
     setActiveId(newId)
     window.history.replaceState(null, "", `#${newId}`)
+    window.dispatchEvent(new Event("portfolio:section-sync"))
   }
 
   return (
@@ -338,7 +346,7 @@ export function ZacharyWorkSection() {
                         alt={`${project.title} preview`}
                         className="nk-tile-img"
                         fill
-                        sizes="(max-width: 900px) 94vw, 48vw"
+                        sizes="(max-width: 768px) 96vw, 48vw"
                         src={project.coverImage}
                       />
                     </div>
@@ -551,8 +559,9 @@ export function ZacharyWorkSection() {
                           className="nk-screen-img"
                           height={640}
                           priority={index === 0}
+                          sizes="(max-width: 1024px) 96vw, 64vw"
                           src={screen.imageSrc}
-                          width={1100}
+                          width={1138}
                         />
                       ) : (
                         <div className="nk-screen-slot">

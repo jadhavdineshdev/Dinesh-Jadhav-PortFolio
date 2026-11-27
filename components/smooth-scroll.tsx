@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Lenis from "lenis"
+import { createScrollSoundEngine } from "@/lib/scroll-sound"
 
 export function SmoothScroll() {
   useEffect(() => {
@@ -11,6 +12,14 @@ export function SmoothScroll() {
     const desktopPointer = window.matchMedia(
       "(min-width: 768px) and (hover: hover) and (pointer: fine)"
     )
+
+    // Pace-synced scroll tick audio active on both desktop & mobile
+    const soundEngine = createScrollSoundEngine({
+      enabled: true,
+      volume: 0.92,
+      stepPx: 36,
+    })
+
     let lenis: Lenis | undefined
 
     const syncScrollMode = () => {
@@ -38,6 +47,7 @@ export function SmoothScroll() {
       motionPreference.removeEventListener("change", syncScrollMode)
       desktopPointer.removeEventListener("change", syncScrollMode)
       lenis?.destroy()
+      soundEngine.destroy()
     }
   }, [])
 

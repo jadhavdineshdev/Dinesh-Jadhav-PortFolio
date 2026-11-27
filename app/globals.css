@@ -126,11 +126,11 @@ button {
   max-width: 1440px;
   height: 100%;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-inline: 1px solid var(--nk-ink-08);
+  border-inline: 1px solid rgba(21, 17, 17, 0.24);
 }
 
 .nk-grid-cols>span {
-  border-right: 1px solid var(--nk-ink-08);
+  border-right: 1px solid rgba(21, 17, 17, 0.24);
 }
 
 .nk-grid-cols>span:last-child {
@@ -379,8 +379,21 @@ button {
   font-family: var(--font-mono), monospace;
 }
 
+.nk-page-name-clip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  overflow: hidden;
+}
+
 .nk-page-name {
-  color: var(--nk-cream-64);
+  display: inline-block;
+  color: var(--nk-red);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .nk-menu-btn {
@@ -410,7 +423,10 @@ button {
   left: 0;
   height: 1.5px;
   background: var(--nk-cream);
-  transition: transform 200ms ease, width 200ms ease, top 200ms ease;
+  transition:
+    transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 380ms cubic-bezier(0.16, 1, 0.3, 1),
+    top 380ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nk-line-1 {
@@ -434,6 +450,39 @@ button {
   transform: rotate(-45deg);
 }
 
+/* Smooth animated Menu <-> Close vertical state track */
+.nk-menu-state-roll {
+  position: relative;
+  display: inline-block;
+  height: 15px;
+  line-height: 15px;
+  overflow: hidden;
+}
+
+.nk-menu-state-track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nk-menu-state-track > span {
+  display: block;
+  height: 15px;
+}
+
+.nk-menu-btn.is-open .nk-menu-state-track {
+  transform: translateY(-15px);
+}
+
+.nk-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(21, 17, 17, 0.44);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
 /* Signature Nika Stern 2-layer vertical text roll on hover */
 .nk-roll {
   position: relative;
@@ -446,7 +495,7 @@ button {
 
 .nk-roll>span {
   display: block;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nk-menu-btn:hover .nk-roll>span,
@@ -493,12 +542,14 @@ button {
   gap: 8px;
   height: 30px;
   padding: 0 12px;
+  border: 0;
   border-radius: 6px;
   background: var(--nk-red);
   color: var(--nk-cream);
   font-family: var(--font-mono), monospace;
   font-size: 12px;
   font-weight: 500;
+  cursor: pointer;
 }
 
 .nk-menu-drawer {
@@ -510,7 +561,35 @@ button {
   border-radius: 12px;
   background: var(--nk-ink);
   color: var(--nk-cream);
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.48);
+  transform-origin: top center;
+  will-change: clip-path, transform, opacity;
+}
+
+.nk-menu-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--nk-cream);
+  text-align: left;
+  cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.nk-menu-action-link em {
+  font-style: normal;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--nk-red);
+}
+
+.nk-menu-action-link:hover {
+  color: var(--nk-red);
+  transform: translateX(3px);
 }
 
 .nk-menu-cols {
@@ -548,9 +627,19 @@ button {
   color: var(--nk-red);
 }
 
-.nk-menu-cols a:hover {
+.nk-menu-cols a:hover,
+.nk-menu-cols a.is-current {
   color: var(--nk-red);
   transform: translateX(3px);
+}
+
+.nk-menu-cols a.is-current::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--nk-red);
+  flex-shrink: 0;
 }
 
 .nk-menu-cols p {
@@ -688,7 +777,10 @@ button {
 .nk-person-img {
   object-fit: cover;
   object-position: center 26%;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  filter: grayscale(100%) contrast(1.08) brightness(0.98);
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 320ms ease;
 }
 
 .nk-person-card:hover .nk-person-img {
@@ -794,12 +886,14 @@ button {
   gap: 7px;
   height: 30px;
   padding: 0 11px;
+  border: 0;
   border-radius: 6px;
   background: var(--nk-red);
   color: var(--nk-cream);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   font-weight: 500;
+  cursor: pointer;
   transition: background 180ms ease;
 }
 
@@ -879,6 +973,7 @@ button {
 .portrait-dialog-image img {
   object-fit: cover;
   object-position: center 32%;
+  filter: grayscale(100%) contrast(1.08) brightness(0.98);
 }
 
 .portrait-hint {
@@ -1083,6 +1178,16 @@ button {
   background-color: var(--nk-red);
 }
 
+.nk-approach-section,
+.nk-work-section,
+.nk-avail-section {
+  border-top: 1px solid rgba(21, 17, 17, 0.2);
+}
+
+.nk-work-section {
+  padding-top: 112px;
+}
+
 .nk-approach-section {
   padding-top: 136px;
 }
@@ -1227,7 +1332,7 @@ button {
 .nk-tile-core {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   border-radius: 12px;
   background: var(--nk-ink);
   overflow: hidden;
@@ -1531,6 +1636,10 @@ button {
   align-items: start;
 }
 
+.nk-study-grid > * {
+  min-width: 0;
+}
+
 .nk-study-sidebar {
   position: sticky;
   top: 84px;
@@ -1719,10 +1828,10 @@ button {
    ========================================================================== */
 .nk-services-section {
   position: relative;
-  z-index: 2;
   padding: 120px 32px;
   background-color: var(--nk-cream);
   color: var(--nk-ink);
+  border-block: 1px solid rgba(21, 17, 17, 0.2);
 }
 
 .nk-stage-grid {
@@ -1895,10 +2004,41 @@ button {
 }
 
 .nk-ink-panel {
+  position: relative;
   padding: 108px 20px 96px;
   border-radius: 14px;
   background-color: var(--nk-ink);
   color: var(--nk-cream);
+  overflow: hidden;
+}
+
+.nk-ink-panel::before,
+.nk-footer-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1440px, calc(100% - 40px));
+  pointer-events: none;
+  z-index: 1;
+  border-inline: 1px solid rgba(248, 243, 240, 0.12);
+  background-image: linear-gradient(
+    to right,
+    transparent calc(25% - 1px),
+    rgba(248, 243, 240, 0.12) calc(25% - 1px),
+    rgba(248, 243, 240, 0.12) 25%,
+    transparent 25%,
+    transparent calc(50% - 1px),
+    rgba(248, 243, 240, 0.12) calc(50% - 1px),
+    rgba(248, 243, 240, 0.12) 50%,
+    transparent 50%,
+    transparent calc(75% - 1px),
+    rgba(248, 243, 240, 0.12) calc(75% - 1px),
+    rgba(248, 243, 240, 0.12) 75%,
+    transparent 75%
+  );
 }
 
 .nk-notes-grid {
@@ -2020,10 +2160,10 @@ button {
    ========================================================================== */
 .nk-journey-section {
   position: relative;
-  z-index: 2;
   padding: 120px 32px;
   background-color: var(--nk-cream);
   color: var(--nk-ink);
+  border-block: 1px solid rgba(21, 17, 17, 0.2);
 }
 
 .nk-award-list {
@@ -2099,12 +2239,48 @@ button {
 .nk-slot-tile {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 10px;
   padding: 22px;
+  border: 1px solid transparent;
   border-radius: 10px;
   background: var(--nk-cream);
   color: var(--nk-ink);
+  text-align: left;
   box-shadow: 0 14px 32px var(--nk-red-shadow);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.nk-slot-tile.is-interactive {
+  cursor: pointer;
+}
+
+.nk-slot-tile.is-interactive:hover {
+  transform: translateY(-4px);
+  background: var(--nk-ink);
+  color: var(--nk-cream);
+  border-color: var(--nk-cream-14);
+}
+
+.nk-slot-tile.is-interactive:hover .nk-slot-head,
+.nk-slot-tile.is-interactive:hover p {
+  color: var(--nk-cream-64);
+}
+
+.nk-slot-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--nk-red);
 }
 
 .nk-slot-head {
@@ -2165,6 +2341,7 @@ button {
 }
 
 .nk-footer-panel {
+  position: relative;
   padding: 88px 24px 28px;
   border-radius: 14px;
   background-color: var(--nk-ink);
@@ -2244,61 +2421,55 @@ button {
   color: var(--nk-cream);
 }
 
-.nk-footer-directory {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 28px;
-  padding: 52px 12px 64px;
-}
-
-.nk-fcol {
+.nk-footer-meta-strip {
   display: flex;
-  flex-direction: column;
-  gap: 9px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 28px 12px 44px;
 }
 
-.nk-fcol-title {
-  margin-bottom: 6px;
-  font-family: var(--font-mono), monospace;
-  font-size: 11.5px;
-  color: var(--nk-cream-64);
-}
-
-.nk-fcol p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--nk-cream);
-}
-
-.nk-fcol-clock {
-  margin-top: 8px !important;
-  font-family: var(--font-mono), monospace;
-  font-size: 12px !important;
-  color: var(--nk-cream-64) !important;
-}
-
-.nk-fcol-clock span {
-  color: var(--nk-red);
-}
-
-.nk-fcol a {
+.nk-footer-studio-line {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--nk-cream);
-  transition: color 160ms ease;
-}
-
-.nk-fcol a em {
-  font-style: normal;
+  gap: 10px;
+  flex-wrap: wrap;
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--nk-cream-64);
 }
 
-.nk-fcol a:hover {
+.nk-footer-studio-line em {
+  font-style: normal;
+  opacity: 0.45;
+}
+
+.nk-footer-live-clock strong {
+  font-weight: 500;
+  color: var(--nk-cream);
+}
+
+.nk-footer-socials {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.nk-footer-socials a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--nk-cream);
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.nk-footer-socials a:hover {
   color: var(--nk-red);
+  transform: translateY(-1px);
 }
 
 .nk-footer-wordmark {
@@ -2450,10 +2621,18 @@ button {
     font-size: 11px;
   }
 
-  .nk-nav-status,
-  .nk-slash,
-  .nk-page-name {
+  .nk-nav-status {
     display: none;
+  }
+
+  .nk-page-name {
+    font-size: 11px;
+  }
+
+  @media (max-width: 410px) {
+    .nk-brand-last {
+      display: none;
+    }
   }
 
   .nk-nav-book {
@@ -2492,6 +2671,18 @@ button {
 
   .nk-grid-cols>span:nth-child(n + 3) {
     display: none;
+  }
+
+  .nk-ink-panel::before,
+  .nk-footer-panel::before {
+    width: calc(100% - 12px);
+    background-image: linear-gradient(
+      to right,
+      transparent calc(50% - 1px),
+      rgba(248, 243, 240, 0.12) calc(50% - 1px),
+      rgba(248, 243, 240, 0.12) 50%,
+      transparent 50%
+    );
   }
 
   /* 4. Hero: pair Dinesh Jadhav cleanly at top, card & disciplines stacked neatly */
@@ -2641,65 +2832,66 @@ button {
     font-size: 14px;
   }
 
-  /* 7. Selected Work Tiles & Case Study Sheet on Phone */
+  /* 7. Selected Work Tiles & Case Study Sheet on Phone — Full 16:9 Uncropped Fit */
+  .nk-work-grid {
+    gap: 20px;
+  }
+
   .nk-tile-core {
+    display: flex;
+    flex-direction: column;
     aspect-ratio: unset;
-    height: 256px;
-    min-height: 256px;
+    height: auto;
+    min-height: 0;
+    border-radius: 11px;
+    border: 1px solid var(--nk-ink-16);
+    background: var(--nk-ink);
   }
 
-  .nk-tile-image-cover {
-    position: relative;
-    width: 100%;
-    height: 256px;
-  }
-
-  .nk-tile-curachain-cover {
+  .nk-tile-image-cover,
+  .nk-tile-image-cover.nk-parallax-media {
     position: relative;
     inset: auto;
-    min-height: 256px;
-    padding: 44px 12px 58px;
-  }
-
-  .nk-curachain-window {
     width: 100%;
-    min-height: 0;
-    padding: 13px 14px;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    overflow: hidden;
+    background: #1d1818;
+    transform: none !important;
   }
 
-  .nk-cw-center {
-    margin-block: 10px;
-    gap: 4px;
+  .nk-tile-img {
+    object-fit: contain;
+    object-position: center;
   }
 
-  .nk-cw-center strong {
-    font-size: 16px;
-  }
-
-  .nk-cw-center span {
-    font-size: 10px;
-  }
-
-  .nk-cw-foot {
-    padding-top: 8px;
-    font-size: 9.5px;
+  .nk-work-tile:hover .nk-tile-img {
+    transform: none;
   }
 
   .nk-tile-glass-tag {
-    top: 10px;
-    right: 10px;
-    padding: 3px 8px;
-    font-size: 10px;
+    display: none;
   }
 
   .nk-tile-caption {
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    height: 36px;
-    padding: 0 10px;
-    gap: 7px;
+    position: static;
+    inset: auto;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    gap: 8px;
+    border-radius: 0;
+    border-top: 1px solid var(--nk-cream-14);
+    background: var(--nk-ink);
+    backdrop-filter: none;
     font-size: 12px;
+  }
+
+  .nk-tile-yr {
+    margin-left: auto;
   }
 
   .nk-tile-cat {
@@ -2707,7 +2899,7 @@ button {
   }
 
   .nk-tile-foot-bar {
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
   }
 
@@ -2718,7 +2910,7 @@ button {
 
   .nk-study-sheet {
     margin: 0;
-    padding: 18px 14px;
+    padding: 16px 12px;
     border-radius: 12px;
   }
 
@@ -2739,9 +2931,27 @@ button {
     font-size: 26px;
   }
 
+  .nk-study-screens {
+    gap: 16px;
+  }
+
   .nk-screen-head {
     padding: 10px 12px;
     font-size: 12px;
+  }
+
+  .nk-screen-media {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .nk-screen-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .nk-screen-caption {
@@ -2908,10 +3118,15 @@ button {
     gap: 6px;
   }
 
-  .nk-footer-directory {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px 16px;
-    padding: 32px 2px 36px;
+  .nk-footer-meta-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 2px 32px;
+  }
+
+  .nk-footer-socials {
+    gap: 16px;
   }
 
   .nk-footer-wordmark {
@@ -3016,6 +3231,323 @@ body::-webkit-scrollbar,
 
 .nk-parallax-media {
   position: absolute;
-  inset: -7% 0;
+  inset: -5% 0;
   will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .nk-tile-core {
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: unset;
+    height: auto;
+    min-height: 0;
+    border: 1px solid var(--nk-ink-16);
+    background: var(--nk-ink);
+  }
+
+  .nk-parallax-media {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #1d1818;
+    transform: none !important;
+  }
+
+  .nk-tile-img {
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .nk-tile-glass-tag {
+    display: none;
+  }
+
+  .nk-tile-caption {
+    position: static;
+    inset: auto;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    gap: 8px;
+    border-radius: 0;
+    border-top: 1px solid var(--nk-cream-14);
+    background: var(--nk-ink);
+    backdrop-filter: none;
+    font-size: 12px;
+  }
+
+  .nk-tile-yr {
+    margin-left: auto;
+  }
+}
+
+/* ==========================================================================
+   BOOK A CALL / DIRECT MAIL & WHATSAPP INTERACTIVE MODAL
+   ========================================================================== */
+.nk-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.nk-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 17, 17, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.nk-book-card {
+  position: relative;
+  z-index: 2;
+  width: min(460px, 100%);
+  padding: 22px;
+  border: 1px solid var(--nk-ink-16);
+  border-radius: 14px;
+  background: var(--nk-cream);
+  color: var(--nk-ink);
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.48);
+}
+
+.nk-book-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.nk-book-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--nk-ink-80);
+}
+
+.nk-book-close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--nk-ink-16);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--nk-ink);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.nk-book-close:hover {
+  background: var(--nk-ink);
+  color: var(--nk-cream);
+}
+
+.nk-book-heading h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.nk-book-heading p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nk-ink-80);
+}
+
+.nk-book-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.nk-book-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--nk-ink-16);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--nk-ink-80);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.nk-book-chip:hover {
+  border-color: var(--nk-ink);
+  color: var(--nk-ink);
+}
+
+.nk-book-chip.is-active {
+  border-color: var(--nk-ink);
+  background: var(--nk-ink);
+  color: var(--nk-cream);
+}
+
+.nk-book-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.nk-book-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.nk-book-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nk-book-field span {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  color: var(--nk-ink-40);
+}
+
+.nk-book-field input,
+.nk-book-field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--nk-ink-16);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--nk-ink);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 13.5px;
+  line-height: 1.45;
+  outline: none;
+  resize: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.nk-book-field input::placeholder,
+.nk-book-field textarea::placeholder {
+  color: var(--nk-ink-40);
+}
+
+.nk-book-field input:focus,
+.nk-book-field textarea:focus {
+  border-color: var(--nk-red);
+  box-shadow: 0 0 0 3px rgba(234, 42, 30, 0.12);
+}
+
+.nk-book-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.nk-book-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.nk-book-send:hover {
+  transform: translateY(-1px);
+}
+
+.nk-book-send.is-whatsapp {
+  background: var(--nk-red);
+  color: var(--nk-cream);
+}
+
+.nk-book-send.is-email {
+  background: var(--nk-ink);
+  color: var(--nk-cream);
+}
+
+.nk-book-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: rgba(234, 42, 30, 0.1);
+  color: var(--nk-red-deep);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+}
+
+.nk-book-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--nk-ink-08);
+}
+
+.nk-book-mini-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--nk-ink-80);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.nk-book-mini-link:hover {
+  color: var(--nk-red);
+}
+
+@media (max-width: 560px) {
+  .nk-book-card {
+    padding: 18px 15px;
+  }
+
+  .nk-book-heading h2 {
+    font-size: 20px;
+  }
+
+  .nk-book-row,
+  .nk-book-actions {
+    grid-template-columns: 1fr;
+  }
 }

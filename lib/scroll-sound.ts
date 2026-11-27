@@ -1,34 +1,85 @@
-// High-Fidelity Continuous Scrolling Sound Engine
-// Uses the user's custom scroll audio asset (/sounds/scroll.mp3) with seamless Web Audio API looping
-// Modulates gain and playback rate based on scroll velocity across desktop and mobile.
+// Pace-Synced Mechanical Scroll Sound Engine
+// Uses the user's uploaded scroll audio (/sounds/scroll-tick.wav) sliced into clean
+// individual tick grains so playback cadence naturally matches the user's exact scroll pace.
 
 export interface ScrollSoundEngineOptions {
   enabled?: boolean
   volume?: number
+  stepPx?: number
 }
 
 export interface ScrollSoundEngine {
-  handleScroll: (speedHint?: number) => void
+  notifyScroll: (scrollY: number, velocityHint?: number) => void
   unlock: () => Promise<void>
   destroy: () => void
 }
 
-let cachedBufferPromise: Promise<ArrayBuffer> | null = null
+// Exact transient windows (in seconds) of the 9 crisp ticks in /sounds/scroll-tick.wav
+const TICK_WINDOWS: ReadonlyArray< readonly [number, number] > = [
+  [0.0, 0.028],
+  [0.029, 0.064],
+  [0.068, 0.097],
+  [0.099, 0.127],
+  [0.129, 0.157],
+  [0.159, 0.187],
+  [0.189, 0.217],
+  [0.219, 0.247],
+  [0.249, 0.283],
+]
 
-function fetchScrollAudio(): Promise<ArrayBuffer> {
-  if (!cachedBufferPromise) {
-    cachedBufferPromise = fetch("/sounds/scroll.mp3")
+let cachedWavPromise: Promise<ArrayBuffer> | null = null
+
+function fetchScrollTickWav(): Promise<ArrayBuffer> {
+  if (!cachedWavPromise) {
+    cachedWavPromise = fetch("/sounds/scroll-tick.wav")
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.arrayBuffer()
       })
       .catch((err) => {
-        console.warn("Could not load /sounds/scroll.mp3:", err)
-        cachedBufferPromise = null
+        console.warn("Could not load /sounds/scroll-tick.wav:", err)
+        cachedWavPromise = null
         throw err
       })
   }
-  return cachedBufferPromise
+  return cachedWavPromise
+}
+
+function sliceTickBuffers(
+  audioContext: AudioContext,
+  fullBuffer: AudioBuffer
+): AudioBuffer[] {
+  const sampleRate = fullBuffer.sampleRate
+  const channels = fullBuffer.numberOfChannels
+  const fadeInSamples = Math.max(8, Math.floor(sampleRate * 0.0006))
+  const fadeOutSamples = Math.max(24, Math.floor(sampleRate * 0.0035))
+  const slices: AudioBuffer[] = []
+
+  for (const [startSec, endSec] of TICK_WINDOWS) {
+    const startFrame = Math.max(0, Math.floor(startSec * sampleRate))
+    const endFrame = Math.min(fullBuffer.length, Math.floor(endSec * sampleRate))
+    const length = endFrame - startFrame
+    if (length <= fadeOutSamples) continue
+
+    const sub = audioContext.createBuffer(channels, length, sampleRate)
+    for (let ch = 0; ch < channels; ch++) {
+      const srcData = fullBuffer.getChannelData(ch)
+      const dstData = sub.getChannelData(ch)
+      for (let i = 0; i < length; i++) {
+        let env = 1
+        if (i < fadeInSamples) {
+          env = i / fadeInSamples
+        } else if (i > length - fadeOutSamples) {
+          const rem = length - i
+          env = 0.5 * (1 - Math.cos((Math.PI * rem) / fadeOutSamples))
+        }
+        dstData[i] = srcData[startFrame + i] * env
+      }
+    }
+    slices.push(sub)
+  }
+
+  return slices.length > 0 ? slices : [fullBuffer]
 }
 
 export function createScrollSoundEngine(
@@ -36,30 +87,33 @@ export function createScrollSoundEngine(
 ): ScrollSoundEngine {
   if (typeof window === "undefined") {
     return {
-      handleScroll: () => {},
+      notifyScroll: () => {},
       unlock: async () => {},
       destroy: () => {},
     }
   }
 
-  const masterVolume = options.volume ?? 0.85
   const isEnabled = options.enabled ?? true
+  const masterVolume = options.volume ?? 0.9
+  const stepPx = options.stepPx ?? 36
+  const minTickIntervalMs = 24
+
   let ctx: AudioContext | null = null
-  let sourceNode: AudioBufferSourceNode | null = null
-  let gainNode: GainNode | null = null
-  let currentBuffer: AudioBuffer | null = null
-
-  let stopTimeout: ReturnType<typeof setTimeout> | null = null
-  let suspendTimeout: ReturnType<typeof setTimeout> | null = null
-  let isPlaying = false
-  let lastScrollY = window.scrollY
-  let lastScrollTime = performance.now()
+  let masterGain: GainNode | null = null
+  let tickSlices: AudioBuffer[] = []
   let isDecoding = false
+  let tickCursor = 0
 
-  // Pre-fetch the audio asset immediately in the background
-  void fetchScrollAudio().catch(() => {})
+  let lastScrollY = window.scrollY
+  let lastMoveTime = performance.now()
+  let lastTickTime = 0
+  let accumulatedPx = 0
+  let suspendTimer: ReturnType<typeof setTimeout> | null = null
 
-  const initAudio = (): AudioContext | null => {
+  // Pre-fetch immediately so the WAV is already in browser memory on first scroll
+  void fetchScrollTickWav().catch(() => {})
+
+  const ensureContext = (): AudioContext | null => {
     if (ctx) return ctx
     const AudioCtx =
       window.AudioContext ||
@@ -69,63 +123,121 @@ export function createScrollSoundEngine(
 
     try {
       ctx = new AudioCtx()
-      gainNode = ctx.createGain()
-      gainNode.gain.setValueAtTime(0.0001, ctx.currentTime)
-      gainNode.connect(ctx.destination)
-
-      // Decode the custom MP3 loop
-      loadBufferAndStart(ctx)
-
+      masterGain = ctx.createGain()
+      masterGain.gain.value = masterVolume
+      masterGain.connect(ctx.destination)
+      decodeTicks(ctx)
       return ctx
-    } catch (err) {
-      console.warn("Could not initialize scroll sound AudioContext:", err)
+    } catch {
       return null
     }
   }
 
-  const loadBufferAndStart = (audioContext: AudioContext) => {
-    if (currentBuffer || isDecoding) return
+  const decodeTicks = (audioContext: AudioContext) => {
+    if (tickSlices.length > 0 || isDecoding) return
     isDecoding = true
 
-    fetchScrollAudio()
-      .then((arrBuf) => audioContext.decodeAudioData(arrBuf.slice(0)))
+    fetchScrollTickWav()
+      .then((buf) => audioContext.decodeAudioData(buf.slice(0)))
       .then((decoded) => {
         isDecoding = false
-        if (!decoded || !ctx) return
-        currentBuffer = decoded
-        startLoopNode()
+        if (!ctx) return
+        tickSlices = sliceTickBuffers(audioContext, decoded)
       })
       .catch(() => {
         isDecoding = false
       })
   }
 
-  const startLoopNode = () => {
-    if (!ctx || !currentBuffer || !gainNode) return
-    try {
-      if (sourceNode) {
-        try {
-          sourceNode.stop()
-          sourceNode.disconnect()
-        } catch {}
+  const scheduleIdleSuspend = () => {
+    if (suspendTimer) clearTimeout(suspendTimer)
+    suspendTimer = setTimeout(() => {
+      if (ctx && ctx.state === "running") {
+        void ctx.suspend().catch(() => {})
       }
+    }, 6000)
+  }
 
-      sourceNode = ctx.createBufferSource()
-      sourceNode.buffer = currentBuffer
-      sourceNode.loop = true
-      sourceNode.loopStart = 0
-      sourceNode.loopEnd = currentBuffer.duration
-      sourceNode.playbackRate.setValueAtTime(1.0, ctx.currentTime)
+  const fireTick = (speedPxPerMs: number) => {
+    const audioContext = ensureContext()
+    if (!audioContext || !masterGain) return
 
-      sourceNode.connect(gainNode)
-      sourceNode.start(0)
-    } catch (err) {
-      console.warn("Could not start scroll loop source node:", err)
+    if (audioContext.state !== "running") {
+      void audioContext.resume().catch(() => {})
+      return
+    }
+
+    if (tickSlices.length === 0) {
+      decodeTicks(audioContext)
+      return
+    }
+
+    const nowMs = performance.now()
+    if (nowMs - lastTickTime < minTickIntervalMs) return
+    lastTickTime = nowMs
+
+    const buffer = tickSlices[tickCursor % tickSlices.length]
+    tickCursor += 1
+
+    // Normalize velocity (0 = slow creep, 1 = brisk scroll)
+    const normSpeed = Math.min(Math.max((speedPxPerMs - 0.15) / 2.6, 0), 1)
+
+    // Soften slightly if voice note is actively speaking so both coexist cleanly
+    const voiceEl = document.querySelector<HTMLAudioElement>("audio.portrait-audio")
+    const voiceDuck = voiceEl && !voiceEl.paused ? 0.45 : 1
+
+    const gainValue = (0.34 + normSpeed * 0.38) * voiceDuck
+    const playbackRate = 0.96 + normSpeed * 0.1
+
+    try {
+      const source = audioContext.createBufferSource()
+      const tickGain = audioContext.createGain()
+      source.buffer = buffer
+      source.playbackRate.value = playbackRate
+      tickGain.gain.value = gainValue
+
+      source.connect(tickGain)
+      tickGain.connect(masterGain)
+      source.start(0)
+      scheduleIdleSuspend()
+    } catch {
+      // Ignore transient Web Audio errors
     }
   }
 
+  const notifyScroll = (scrollY: number, velocityHint?: number) => {
+    if (!isEnabled) return
+
+    const now = performance.now()
+    const dt = Math.max(now - lastMoveTime, 6)
+    const deltaPx = Math.abs(scrollY - lastScrollY)
+    lastScrollY = scrollY
+    lastMoveTime = now
+
+    if (deltaPx <= 0.2 || deltaPx > 2400) {
+      // Ignore layout jumps / instant anchor teleports
+      return
+    }
+
+    accumulatedPx += deltaPx
+    const speedPxPerMs =
+      velocityHint !== undefined
+        ? Math.abs(velocityHint) / 1000
+        : deltaPx / dt
+
+    if (accumulatedPx >= stepPx) {
+      // Carry remainder modulo stepPx so fast flicks don't build up a backlog
+      accumulatedPx = accumulatedPx % stepPx
+      fireTick(speedPxPerMs)
+    }
+  }
+
+  const handleNativeScroll = () => {
+    notifyScroll(window.scrollY)
+  }
+
   const unlock = async () => {
-    const audioContext = initAudio()
+    const audioContext = ensureContext()
     if (audioContext && audioContext.state === "suspended") {
       try {
         await audioContext.resume()
@@ -133,166 +245,49 @@ export function createScrollSoundEngine(
     }
   }
 
-  const stopScrolling = () => {
-    isPlaying = false
-    if (!ctx || !gainNode) return
-    const now = ctx.currentTime
-    gainNode.gain.cancelScheduledValues(now)
-    gainNode.gain.setTargetAtTime(0.0001, now, 0.08) // Smooth fade out in ~80ms
-
-    // Suspend after 5 seconds of inactivity to save device battery
-    if (suspendTimeout) clearTimeout(suspendTimeout)
-    suspendTimeout = setTimeout(() => {
-      if (!isPlaying && ctx && ctx.state === "running") {
-        void ctx.suspend().catch(() => {})
-      }
-    }, 5000)
-  }
-
-  const handleScroll = (speedHint?: number) => {
-    if (!isEnabled) return
-
-    const now = performance.now()
-    const currentY = window.scrollY
-    const timeDelta = Math.max(now - lastScrollTime, 8)
-    const distance = Math.abs(currentY - lastScrollY)
-    lastScrollY = currentY
-    lastScrollTime = now
-
-    // Speed calculation
-    const calculatedSpeed = (distance / timeDelta) * 32
-    const speed = Math.min(Math.max(speedHint ?? calculatedSpeed, 2), 65)
-
-    const audioContext = initAudio()
-    if (!audioContext || !gainNode) return
-
-    if (audioContext.state === "suspended") {
-      void audioContext.resume().catch(() => {})
-    }
-
-    if (suspendTimeout) {
-      clearTimeout(suspendTimeout)
-      suspendTimeout = null
-    }
-
-    // If buffer is ready but sourceNode hasn't started yet, start it now
-    if (!sourceNode && currentBuffer) {
-      startLoopNode()
-    }
-
-    const ctxNow = audioContext.currentTime
-    isPlaying = true
-
-    // Normalize speed factor (0.2 to 1.5)
-    const factor = Math.min(Math.max(speed / 28, 0.25), 1.4)
-
-    // Comfortable target volume for the custom audio asset
-    const targetGain = Math.min(0.42, (0.08 + factor * 0.24) * masterVolume)
-    // Pitch modulation matching scroll speed
-    const targetRate = Math.min(1.22, 0.92 + factor * 0.18)
-
-    gainNode.gain.cancelScheduledValues(ctxNow)
-    gainNode.gain.setTargetAtTime(targetGain, ctxNow, 0.03)
-
-    if (sourceNode) {
-      sourceNode.playbackRate.cancelScheduledValues(ctxNow)
-      sourceNode.playbackRate.setTargetAtTime(targetRate, ctxNow, 0.035)
-    }
-
-    // Reset debounce timeout
-    if (stopTimeout) clearTimeout(stopTimeout)
-    stopTimeout = setTimeout(stopScrolling, 110)
-  }
-
-  // Wheel listener for desktop mouse/trackpad
-  const handleWheel = (e: WheelEvent) => {
-    const wheelSpeed = Math.min(Math.abs(e.deltaY) * 0.45, 60)
-    handleScroll(wheelSpeed)
-  }
-
-  // Native scroll listener
-  const handleNativeScroll = () => {
-    handleScroll()
-  }
-
-  // Mobile Touch Drag listener for instant audio on mobile swipe
-  let lastTouchY = 0
-  const handleTouchStart = (e: TouchEvent) => {
-    if (e.touches.length > 0) {
-      lastTouchY = e.touches[0].clientY
-    }
+  const handleGestureUnlock = () => {
     void unlock()
   }
 
-  const handleTouchMove = (e: TouchEvent) => {
-    if (e.touches.length > 0) {
-      const currentTouchY = e.touches[0].clientY
-      const deltaY = Math.abs(currentTouchY - lastTouchY)
-      lastTouchY = currentTouchY
-      const touchSpeed = Math.min(deltaY * 1.6, 60)
-      handleScroll(touchSpeed)
-    }
-  }
-
-  // Event Listeners
-  window.addEventListener("wheel", handleWheel, { passive: true })
   window.addEventListener("scroll", handleNativeScroll, { passive: true })
-  window.addEventListener("touchstart", handleTouchStart, { passive: true })
-  window.addEventListener("touchmove", handleTouchMove, { passive: true })
-
-  // Unlock on first user interaction
-  const removeUnlockListeners = () => {
-    window.removeEventListener("pointerdown", handleFirstInteraction, true)
-    window.removeEventListener("keydown", handleFirstInteraction, true)
-    window.removeEventListener("touchstart", handleFirstInteraction, true)
-  }
-
-  const handleFirstInteraction = () => {
-    void unlock()
-    removeUnlockListeners()
-  }
-
-  window.addEventListener("pointerdown", handleFirstInteraction, {
+  window.addEventListener("pointerdown", handleGestureUnlock, {
     passive: true,
     capture: true,
   })
-  window.addEventListener("keydown", handleFirstInteraction, {
+  window.addEventListener("touchstart", handleGestureUnlock, {
     passive: true,
     capture: true,
   })
-  window.addEventListener("touchstart", handleFirstInteraction, {
+  window.addEventListener("keydown", handleGestureUnlock, {
+    passive: true,
+    capture: true,
+  })
+  window.addEventListener("wheel", handleGestureUnlock, {
     passive: true,
     capture: true,
   })
 
   return {
-    handleScroll,
+    notifyScroll,
     unlock,
     destroy: () => {
-      removeUnlockListeners()
-      window.removeEventListener("wheel", handleWheel)
       window.removeEventListener("scroll", handleNativeScroll)
-      window.removeEventListener("touchstart", handleTouchStart)
-      window.removeEventListener("touchmove", handleTouchMove)
-      if (stopTimeout) clearTimeout(stopTimeout)
-      if (suspendTimeout) clearTimeout(suspendTimeout)
-      if (sourceNode) {
+      window.removeEventListener("pointerdown", handleGestureUnlock, true)
+      window.removeEventListener("touchstart", handleGestureUnlock, true)
+      window.removeEventListener("keydown", handleGestureUnlock, true)
+      window.removeEventListener("wheel", handleGestureUnlock, true)
+      if (suspendTimer) clearTimeout(suspendTimer)
+      if (masterGain) {
         try {
-          sourceNode.stop()
-          sourceNode.disconnect()
-        } catch {}
-      }
-      if (gainNode) {
-        try {
-          gainNode.disconnect()
+          masterGain.disconnect()
         } catch {}
       }
       if (ctx && ctx.state !== "closed") {
         void ctx.close().catch(() => {})
       }
       ctx = null
-      sourceNode = null
-      gainNode = null
+      masterGain = null
+      tickSlices = []
     },
   }
 }

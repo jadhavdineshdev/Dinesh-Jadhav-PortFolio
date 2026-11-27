@@ -14,6 +14,7 @@ import {
 import { PortraitInteraction } from "@/components/portrait-interaction"
 import { ZacharyWorkSection } from "@/components/zachary-work-section"
 import { NikaScrollReveal } from "@/components/nika-scroll-reveal"
+import { BookCallModal, type ContactTopic } from "@/components/book-call-modal"
 
 const contactEmailUrl =
   "https://mail.google.com/mail/?view=cm&fs=1&to=dineshjadhavdev%40gmail.com"
@@ -188,42 +189,99 @@ const journeyRows = [
   },
 ]
 
-const openSlots = [
+const openSlots: {
+  year: string
+  month: string
+  detail: string
+  topic: ContactTopic
+}[] = [
   {
     year: "2026",
     month: "Now",
     detail: "Open for Full-Stack & Frontend Internships",
-    free: true,
+    topic: "Internship / Role",
   },
   {
     year: "2026",
     month: "Q4",
     detail: "Available for freelance web & MVP builds",
-    free: true,
+    topic: "Project / MVP",
   },
   {
     year: "2027",
     month: "Grad",
     detail: "Software Engineering roles (B.Tech '27)",
-    free: true,
+    topic: "Internship / Role",
   },
   {
     year: "IST",
     month: "24h",
-    detail: "Mumbai, India · Fast response on email",
-    free: true,
+    detail: "Mumbai, India · Quick 15-min intro calls",
+    topic: "15-min Call",
   },
 ]
 
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
+const menuColsVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.055,
+      delayChildren: 0.06,
+    },
+  },
+  exit: {
+    transition: {
+      staggerChildren: 0.025,
+      staggerDirection: -1,
+    },
+  },
+}
+
+const menuColItemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.36, ease: [0.16, 1, 0.3, 1] as const },
+  },
+  exit: {
+    opacity: 0,
+    y: -6,
+    transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const },
+  },
+}
+
+const NAV_SECTIONS = [
+  { id: "top", label: "Home" },
+  { id: "approach", label: "Approach" },
+  { id: "work", label: "Work" },
+  { id: "services", label: "Services" },
+  { id: "notes", label: "Notes" },
+  { id: "journey", label: "Journey" },
+  { id: "availability", label: "Availability" },
+  { id: "contact", label: "Contact" },
+] as const
+
 export default function Page() {
   const reduceMotion = useReducedMotion()
   const heroRef = useRef<HTMLElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [activeNavId, setActiveNavId] = useState<string>("top")
+  const [activeNavLabel, setActiveNavLabel] = useState<string>("Home")
+  const [bookModalOpen, setBookModalOpen] = useState(false)
+  const [bookModalTopic, setBookModalTopic] =
+    useState<ContactTopic>("15-min Call")
   const [activeDisc, setActiveDisc] = useState(disciplines[0].id)
   const [activeNoteIdx, setActiveNoteIdx] = useState(0)
   const [studioClock, setStudioClock] = useState("--:--")
+
+  const openBookModal = (topic: ContactTopic = "15-min Call") => {
+    setMenuOpen(false)
+    setBookModalTopic(topic)
+    setBookModalOpen(true)
+  }
 
   const { scrollYProgress: heroProgress } = useScroll({
     target: heroRef,
@@ -269,6 +327,73 @@ export default function Page() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    let rafId = 0
+
+    const computeActiveSection = () => {
+      rafId = 0
+      const viewportTrigger = window.innerHeight * 0.36
+      const nearBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 72
+
+      let matchedId = "top"
+      let matchedLabel = "Home"
+
+      if (nearBottom) {
+        matchedId = "contact"
+        matchedLabel = "Contact"
+      } else {
+        for (const sec of NAV_SECTIONS) {
+          const el = document.getElementById(sec.id)
+          if (!el) continue
+          const rect = el.getBoundingClientRect()
+          if (rect.top <= viewportTrigger) {
+            matchedId = sec.id
+            matchedLabel = sec.label
+          }
+        }
+      }
+
+      if (matchedId === "work") {
+        const hash = window.location.hash.replace("#", "").toLowerCase()
+        if (hash === "curachain") matchedLabel = "CuraChain"
+        else if (hash === "docsboard") matchedLabel = "DocsBoard"
+      }
+
+      setActiveNavId(matchedId)
+      setActiveNavLabel(matchedLabel)
+    }
+
+    const requestSync = () => {
+      if (rafId !== 0) return
+      rafId = window.requestAnimationFrame(computeActiveSection)
+    }
+
+    computeActiveSection()
+    window.addEventListener("scroll", requestSync, { passive: true })
+    window.addEventListener("resize", requestSync, { passive: true })
+    window.addEventListener("hashchange", computeActiveSection)
+    window.addEventListener("portfolio:section-sync", computeActiveSection)
+
+    return () => {
+      if (rafId !== 0) window.cancelAnimationFrame(rafId)
+      window.removeEventListener("scroll", requestSync)
+      window.removeEventListener("resize", requestSync)
+      window.removeEventListener("hashchange", computeActiveSection)
+      window.removeEventListener("portfolio:section-sync", computeActiveSection)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false)
+    }
+    window.addEventListener("keydown", handleEsc)
+    return () => window.removeEventListener("keydown", handleEsc)
+  }, [menuOpen])
+
   return (
     <div className="nk-root">
       {/* Subtle Film Grain + Continuous 4-Column Architectural Hairlines */}
@@ -282,16 +407,48 @@ export default function Page() {
         </div>
       </div>
 
+      {/* Smooth Dim Backdrop When Navigation Drawer Is Open */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            aria-hidden="true"
+            className="nk-nav-backdrop"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            onClick={() => setMenuOpen(false)}
+            transition={{ duration: reduceMotion ? 0 : 0.34, ease: EASE_OUT }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* =====================================================================
           FIXED NIKA STERN TOP NAVIGATION BAR
           ===================================================================== */}
       <header className="nk-nav-wrap">
         <div className="nk-nav-bar">
           <div className="nk-nav-left">
-            <a className="nk-brand" href="#top">
-              <span>Dinesh Jadhav</span>
+            <a className="nk-brand" href="#top" onClick={() => setMenuOpen(false)}>
+              <span>
+                Dinesh<span className="nk-brand-last"> Jadhav</span>
+              </span>
               <em className="nk-slash">/</em>
-              <span className="nk-page-name">Home</span>
+              <span className="nk-page-name-clip">
+                <AnimatePresence initial={false} mode="popLayout">
+                  <motion.span
+                    animate={{ y: 0, opacity: 1 }}
+                    className="nk-page-name"
+                    exit={reduceMotion ? { opacity: 0 } : { y: -12, opacity: 0 }}
+                    initial={
+                      reduceMotion ? { opacity: 0 } : { y: 12, opacity: 0 }
+                    }
+                    key={activeNavLabel}
+                    transition={{ duration: 0.24, ease: EASE_OUT }}
+                  >
+                    {activeNavLabel}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
             </a>
 
             <button
@@ -305,9 +462,11 @@ export default function Page() {
                 <i className="nk-line-1" />
                 <i className="nk-line-2" />
               </span>
-              <span className="nk-roll">
-                <span>{menuOpen ? "Close" : "Menu"}</span>
-                <span aria-hidden="true">{menuOpen ? "Close" : "Menu"}</span>
+              <span className="nk-menu-state-roll">
+                <span className="nk-menu-state-track">
+                  <span>Menu</span>
+                  <span>Close</span>
+                </span>
               </span>
             </button>
           </div>
@@ -317,56 +476,143 @@ export default function Page() {
               <i className="nk-live-pulse" />
               <span>Open for 2026 roles</span>
             </div>
-            <a
+            <button
               className="nk-nav-cta"
-              href={contactEmailUrl}
-              rel="noreferrer"
-              target="_blank"
+              onClick={() => openBookModal("15-min Call")}
+              type="button"
             >
               <span className="nk-dot-cream" />
               <span className="nk-roll">
                 <span>Book a call</span>
                 <span aria-hidden="true">Say hello</span>
               </span>
-            </a>
+            </button>
           </div>
         </div>
 
         <AnimatePresence>
           {menuOpen && (
             <motion.nav
-              animate={{ opacity: 1, y: 0 }}
+              animate={
+                reduceMotion
+                  ? { opacity: 1 }
+                  : {
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      clipPath: "inset(0% 0% 0% 0% round 12px)",
+                    }
+              }
               aria-label="Site directory"
               className="nk-menu-drawer"
-              exit={{ opacity: 0, y: -12 }}
+              exit={
+                reduceMotion
+                  ? { opacity: 0 }
+                  : {
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.99,
+                      clipPath: "inset(0% 0% 100% 0% round 12px)",
+                      transition: {
+                        duration: 0.32,
+                        ease: [0.4, 0, 0.2, 1],
+                      },
+                    }
+              }
               id="nk-menu-drawer"
-              initial={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              initial={
+                reduceMotion
+                  ? { opacity: 0 }
+                  : {
+                      opacity: 0,
+                      y: -10,
+                      scale: 0.985,
+                      clipPath: "inset(0% 0% 100% 0% round 12px)",
+                    }
+              }
+              transition={{
+                duration: 0.46,
+                ease: [0.16, 1, 0.3, 1],
+              }}
             >
-              <div className="nk-menu-cols">
-                <div>
+              <motion.div
+                animate="visible"
+                className="nk-menu-cols"
+                exit="exit"
+                initial="hidden"
+                variants={menuColsVariants}
+              >
+                <motion.div variants={menuColItemVariants}>
                   <span className="nk-menu-label">Index</span>
-                  <a href="#top" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={activeNavId === "top" ? "is-current" : undefined}
+                    href="#top"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     Home
                   </a>
-                  <a href="#approach" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={
+                      activeNavId === "approach" ? "is-current" : undefined
+                    }
+                    href="#approach"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     [01] Approach
                   </a>
-                  <a href="#work" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={activeNavId === "work" ? "is-current" : undefined}
+                    href="#work"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     [02] Selected work
                   </a>
-                  <a href="#services" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={
+                      activeNavId === "services" ? "is-current" : undefined
+                    }
+                    href="#services"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     [03] Services &amp; Stack
                   </a>
-                  <a href="#notes" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={activeNavId === "notes" ? "is-current" : undefined}
+                    href="#notes"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     [04] Studio notes
                   </a>
-                  <a href="#availability" onClick={() => setMenuOpen(false)}>
+                  <a
+                    className={
+                      activeNavId === "journey" ? "is-current" : undefined
+                    }
+                    href="#journey"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    [05] Journey
+                  </a>
+                  <a
+                    className={
+                      activeNavId === "availability" ? "is-current" : undefined
+                    }
+                    href="#availability"
+                    onClick={() => setMenuOpen(false)}
+                  >
                     [06] Availability
                   </a>
-                </div>
+                  <a
+                    className={
+                      activeNavId === "contact" ? "is-current" : undefined
+                    }
+                    href="#contact"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Contact
+                  </a>
+                </motion.div>
 
-                <div>
+                <motion.div variants={menuColItemVariants}>
                   <span className="nk-menu-label">Case Studies</span>
                   <a href="#curachain" onClick={() => setMenuOpen(false)}>
                     CuraChain <em>[01]</em>
@@ -374,10 +620,17 @@ export default function Page() {
                   <a href="#docsboard" onClick={() => setMenuOpen(false)}>
                     DocsBoard <em>[02]</em>
                   </a>
-                </div>
+                </motion.div>
 
-                <div>
-                  <span className="nk-menu-label">Elsewhere</span>
+                <motion.div variants={menuColItemVariants}>
+                  <span className="nk-menu-label">Connect</span>
+                  <button
+                    className="nk-menu-action-link"
+                    onClick={() => openBookModal("15-min Call")}
+                    type="button"
+                  >
+                    Book a call / Text me <em>[Direct]</em>
+                  </button>
                   <a
                     href="https://github.com/jadhavdineshdev"
                     rel="noreferrer"
@@ -395,14 +648,14 @@ export default function Page() {
                   <a href={contactEmailUrl} rel="noreferrer" target="_blank">
                     Email <ArrowUpRight size={13} />
                   </a>
-                </div>
+                </motion.div>
 
-                <div>
+                <motion.div variants={menuColItemVariants}>
                   <span className="nk-menu-label">Studio</span>
                   <p>Mumbai, Maharashtra, India</p>
                   <p>{studioClock} IST · in the studio</p>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </motion.nav>
           )}
         </AnimatePresence>
@@ -537,17 +790,16 @@ export default function Page() {
                   <div className="nk-person-status-bar">
                     <i className="nk-dot-red" />
                     <span className="nk-person-reply">
-                      Replies within two days
+                      Direct mail or WhatsApp
                     </span>
-                    <a
+                    <button
                       className="nk-person-cta"
-                      href={contactEmailUrl}
-                      rel="noreferrer"
-                      target="_blank"
+                      onClick={() => openBookModal("Quick Hello")}
+                      type="button"
                     >
                       <span className="nk-dot-cream" />
                       <span>Write a note</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </motion.aside>
@@ -938,36 +1190,37 @@ export default function Page() {
               <div className="nk-head-body">
                 <div className="nk-head-title-row">
                   <h2 className="nk-h2">Open slots</h2>
-                  <a
+                  <button
                     className="nk-btn-ink"
-                    href={contactEmailUrl}
-                    rel="noreferrer"
-                    target="_blank"
+                    onClick={() => openBookModal("15-min Call")}
+                    type="button"
                   >
                     <span className="nk-dot-cream" />
-                    <span>Start a conversation</span>
-                  </a>
+                    <span>Book a call</span>
+                  </button>
                 </div>
                 <p className="nk-lead">
                   Open for software engineering internships, full-stack roles, and
-                  select product builds.
+                  select product builds. Tap any window to reach out directly.
                 </p>
               </div>
             </motion.div>
 
             <div className="nk-slots-grid">
               {openSlots.map((slot, idx) => (
-                <motion.div
-                  className="nk-slot-tile"
+                <motion.button
+                  className="nk-slot-tile is-interactive"
                   initial={
                     reduceMotion ? false : { opacity: 0, y: 32, scale: 0.97 }
                   }
                   key={`${slot.year}-${slot.month}`}
+                  onClick={() => openBookModal(slot.topic)}
                   transition={{
                     duration: 0.55,
                     delay: idx * 0.08,
                     ease: EASE_OUT,
                   }}
+                  type="button"
                   viewport={{ once: false, amount: 0.2 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 >
@@ -977,13 +1230,16 @@ export default function Page() {
                   </div>
                   <strong>{slot.month}</strong>
                   <p>{slot.detail}</p>
-                </motion.div>
+                  <span className="nk-slot-cta">
+                    Book this slot <ArrowUpRight size={12} />
+                  </span>
+                </motion.button>
               ))}
             </div>
 
             <div className="nk-slots-legend">
               <span>
-                <i className="is-open" /> Available window
+                <i className="is-open" /> Available window · tap to book
               </span>
               <span>Mumbai, India · IST (UTC+5:30)</span>
             </div>
@@ -992,7 +1248,7 @@ export default function Page() {
       </main>
 
       {/* =====================================================================
-          EXACT NIKA STERN INSET #151111 INK FOOTER PANEL ON #ea2a1e
+          CLEAN INSET #151111 INK FOOTER PANEL (NO DUPLICATE MENU DUMP)
           ===================================================================== */}
       <footer className="nk-footer-outer" id="contact">
         <motion.div
@@ -1003,7 +1259,7 @@ export default function Page() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
         >
           <div className="nk-inner">
-            {/* Top Contact Row */}
+            {/* Top Direct Contact Row */}
             <motion.div
               className="nk-footer-contact"
               initial={reduceMotion ? false : { opacity: 0, y: 26 }}
@@ -1014,8 +1270,8 @@ export default function Page() {
               <div className="nk-footer-intro">
                 <span className="nk-mono-label is-light">[ Contact ]</span>
                 <p>
-                  Full-stack web apps, verifiable ledgers and interface studies.
-                  Briefs in English, Hindi or Marathi.
+                  Have a role, product idea, or quick question? Mail or text me
+                  directly — briefs welcome in English, Hindi or Marathi.
                 </p>
               </div>
 
@@ -1031,96 +1287,59 @@ export default function Page() {
                 </a>
 
                 <div className="nk-footer-actions">
-                  <a
+                  <button
                     className="nk-btn-red"
-                    href={contactEmailUrl}
+                    onClick={() => openBookModal("15-min Call")}
+                    type="button"
+                  >
+                    <span className="nk-dot-cream" />
+                    <span>Book a call / Text me</span>
+                  </button>
+                  <a
+                    className="nk-footer-phone"
+                    href="https://wa.me/918010857355"
                     rel="noreferrer"
                     target="_blank"
                   >
-                    <span className="nk-dot-cream" />
-                    <span>Write me a note</span>
-                  </a>
-                  <a className="nk-footer-phone" href="tel:8010857355">
-                    +91 80108 57355
+                    WhatsApp · +91 80108 57355
                   </a>
                 </div>
               </div>
             </motion.div>
 
-            {/* 4-Column Directory */}
-            <motion.div
-              className="nk-footer-directory"
-              initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-              transition={{ duration: 0.65, delay: 0.08, ease: EASE_OUT }}
-              viewport={{ once: false, amount: 0.2 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            >
-              <div className="nk-fcol">
-                <span className="nk-fcol-title">Studio</span>
-                <p>Mumbai, Maharashtra</p>
-                <p>India</p>
-                <p className="nk-fcol-clock">
-                  <span>{studioClock}</span> in the studio
-                </p>
+            {/* Minimal Studio & Social Strip (No Repeated Menu Links) */}
+            <div className="nk-footer-meta-strip">
+              <div className="nk-footer-studio-line">
+                <i className="nk-live-pulse" />
+                <span>Mumbai, Maharashtra, India</span>
+                <em>·</em>
+                <span className="nk-footer-live-clock">
+                  <strong>{studioClock}</strong> IST
+                </span>
               </div>
 
-              <div className="nk-fcol">
-                <span className="nk-fcol-title">Index</span>
-                <a href="#top">Home</a>
-                <a href="#work">Work</a>
-                <a href="#approach">Approach</a>
-                <a href="#services">Services</a>
-                <a href="#contact">Contact</a>
-              </div>
-
-              <div className="nk-fcol">
-                <span className="nk-fcol-title">Disciplines</span>
-                <a href="#work">
-                  Full-Stack <em>[02]</em>
-                </a>
-                <a href="#curachain">
-                  Blockchain EHR <em>[01]</em>
-                </a>
-                <a href="#docsboard">
-                  Spatial UI <em>[01]</em>
-                </a>
-                <a href="#journey">
-                  AI &amp; Data <em>[B.Tech]</em>
-                </a>
-              </div>
-
-              <div className="nk-fcol">
-                <span className="nk-fcol-title">Elsewhere</span>
+              <div className="nk-footer-socials">
                 <a
                   href="https://github.com/jadhavdineshdev"
                   rel="noreferrer"
                   target="_blank"
                 >
-                  GitHub
+                  <span>GitHub</span>
+                  <ArrowUpRight size={13} />
                 </a>
                 <a
                   href="https://www.linkedin.com/in/dinesh-jadhav-8a4273309/"
                   rel="noreferrer"
                   target="_blank"
                 >
-                  LinkedIn
+                  <span>LinkedIn</span>
+                  <ArrowUpRight size={13} />
                 </a>
-                <a
-                  href="https://cura-chain.vercel.app/"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  CuraChain Live
-                </a>
-                <a
-                  href="https://docs-board.vercel.app/"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  DocsBoard Live
+                <a href="#top">
+                  <span>Back to top ↑</span>
                 </a>
               </div>
-            </motion.div>
+            </div>
 
             {/* Monumental Nika Stern Edge-to-Edge Display Name */}
             <div className="nk-clip-reveal">
@@ -1145,6 +1364,13 @@ export default function Page() {
           </div>
         </motion.div>
       </footer>
+
+      {/* Interactive Book a Call / Direct Mail & WhatsApp Modal */}
+      <BookCallModal
+        initialTopic={bookModalTopic}
+        onClose={() => setBookModalOpen(false)}
+        open={bookModalOpen}
+      />
     </div>
   )
 }
